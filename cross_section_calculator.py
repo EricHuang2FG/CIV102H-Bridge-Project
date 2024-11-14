@@ -54,11 +54,11 @@ class InputBox:
         elif event.type == pygame.KEYDOWN:
             if self.active:
                 if event.key == pygame.K_RETURN:
-                    self.value = ""  # Clear the input after pressing Enter
+                    self.value = ""
                 elif event.key == pygame.K_BACKSPACE:
-                    self.value = self.value[:-1]  # Remove the last character
+                    self.value = self.value[:-1] # chop off last character
                 else:
-                    self.value += event.unicode  # Add the typed character to the input text
+                    self.value += event.unicode
 
 class Button:
 

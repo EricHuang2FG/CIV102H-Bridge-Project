@@ -107,8 +107,15 @@ class CrossSection:
         WINDOW.blit(centroidal_axis_display, (70, 600))
         WINDOW.blit(second_moment_of_area_display, (70, 635))
     
-    def behave(self):
-        # find the global minimum (visually lowest, although technically it's the largest)
+    def behave(self, event):
+        if event.type == pygame.MOUSEBUTTONDOWN:
+            for index, object in enumerate(self.display_components):
+                if object.collidepoint(event.pos):
+                    self.display_components.pop(index)
+                    self.components.pop(index)
+                    break
+
+        # find the y-coordinate of the global minimum (visually lowest, although technically it's the largest)
         self.global_min = 0
         for object in self.components:
             x, y, w, h = object[1]
@@ -123,6 +130,8 @@ class CrossSection:
             sum_area_y += area * local_y
         if sum_area != 0:
             self.centroidal_axis = sum_area_y / sum_area
+        else:
+            self.centroidal_axis = 0
         print(f"y: {self.centroidal_axis}, sum_area: {sum_area}, sum_area_y: {sum_area_y}")
 
         self.second_moment_of_area = 0
@@ -169,7 +178,7 @@ def draw_elements() -> None:
 def behave_elements(event) -> None:
     for field in input_fields:
         field.behave(event)
-    cross_section.behave()
+    cross_section.behave(event)
 
 def main() -> None:
     clock = pygame.time.Clock()

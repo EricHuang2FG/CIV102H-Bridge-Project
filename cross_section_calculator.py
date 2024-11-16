@@ -2,7 +2,7 @@ import pygame
 
 pygame.init()
 WINDOW = pygame.display.set_mode((1200, 800))
-pygame.display.set_caption("Cross-Section")
+pygame.display.set_caption("Cross-Section Calculator (Please Don't Hate Me)")
 FPS = 60
 
 BLACK = (0, 0, 0)
@@ -13,6 +13,7 @@ DARK_GRAY = (128, 128, 128)
 LIGHT_BLUE = (80, 196, 222)
 ORANGE = (255, 99, 71)
 RED = (255, 0, 0)
+LIGHT_ORANGE = (255, 165, 0)
 INPUT_FONT = pygame.font.SysFont("couriernew", 16, False)
 INFORMATION_DISPLAY_FONT = pygame.font.SysFont("couriernew", 18, True)
 OFFSET_X = 550
@@ -102,9 +103,12 @@ class CrossSection:
         self.bottom_stress = 0
     
     def draw(self):
-        for object in self.display_components:
+        for index, object in enumerate(self.display_components):
             pygame.draw.rect(WINDOW, DARK_GRAY, object)
             pygame.draw.rect(WINDOW, BLACK, object, 1)
+            _, _, w, h = self.components[index][1]
+            dimensions_text = INFORMATION_DISPLAY_FONT.render(f"{w} x {h}", 0, LIGHT_ORANGE)
+            WINDOW.blit(dimensions_text, (object.centerx - (dimensions_text.get_width() // 2), object.centery - (dimensions_text.get_height() // 2)))
         centroidal_axis_display = INFORMATION_DISPLAY_FONT.render(f"y = {self.centroidal_axis} mm", 0, ORANGE)
         second_moment_of_area_display = INFORMATION_DISPLAY_FONT.render(f"I = {self.second_moment_of_area} mm^4", 0, ORANGE)
         top_stress_display = INFORMATION_DISPLAY_FONT.render(f"Top stress: {self.top_stress} MPa", 0, ORANGE)
@@ -125,12 +129,12 @@ class CrossSection:
         # find the y-coordinate of the global minimum (visually lowest, although technically it's the largest)
         self.global_min = 0
         for object in self.components:
-            x, y, w, h = object[1]
+            _, y, w, h = object[1]
             self.global_min = max(self.global_min, y + h)
         
         sum_area_y, sum_area = 0, 0
         for object in self.components:
-            x, y, w, h = object[1]
+            _, y, w, h = object[1]
             area = w * h
             local_y = abs(y + (h / 2) - self.global_min)
             sum_area += area
@@ -139,14 +143,14 @@ class CrossSection:
             self.centroidal_axis = sum_area_y / sum_area
         else:
             self.centroidal_axis = 0
-        print(f"y: {self.centroidal_axis}, sum_area: {sum_area}, sum_area_y: {sum_area_y}")
+        # print(f"y: {self.centroidal_axis}, sum_area: {sum_area}, sum_area_y: {sum_area_y}")
 
         self.second_moment_of_area = 0
         for object in self.components:
-            x, y, w, h = object[1]
+            _, y, w, h = object[1]
             area = w * h
             self.second_moment_of_area += (area * (y + (h / 2) - (self.global_min - self.centroidal_axis)) ** 2) + (w * (h ** 3)) / 12
-        print(f"I: {self.second_moment_of_area}")
+        # print(f"I: {self.second_moment_of_area}")
 
         if moment:
             try:
@@ -165,7 +169,7 @@ width_box = InputBox(70, 250, "Input the width: ")
 height_box = InputBox(70, 325, "Input the height: ")
 moment_box = InputBox(70, 500, "Input the max moment (negative for top tension): ")
 input_fields = [x_box, y_box, width_box, height_box, moment_box]
-add_object_button = Button(70, 400, "Add")
+add_object_button = Button(70, 390, "Add")
 
 cross_section = CrossSection()
 

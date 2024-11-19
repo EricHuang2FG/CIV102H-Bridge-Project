@@ -1,8 +1,8 @@
 import pygame
 
 pygame.init()
-WINDOW = pygame.display.set_mode((1200, 800))
-pygame.display.set_caption("Cross-Section Calculator (Please Don't Hate Me)")
+WINDOW = pygame.display.set_mode((1200, 900))
+pygame.display.set_caption("Cross-Section Calculator (PART BELOW THE CENTROIDAL AXIS MUST HAVE LEFT/RIGHT AND TOP/BOTTOM SYMMETRY)")
 FPS = 60
 
 BLACK = (0, 0, 0)
@@ -16,8 +16,7 @@ RED = (255, 0, 0)
 LIGHT_ORANGE = (255, 165, 0)
 INPUT_FONT = pygame.font.SysFont("couriernew", 16, False)
 INFORMATION_DISPLAY_FONT = pygame.font.SysFont("couriernew", 18, True)
-OFFSET_X = 550
-OFFSET_Y = 150
+OFFSET_X, OFFSET_Y = 550, 150
 
 class InputBox:
 
@@ -96,11 +95,15 @@ class CrossSection:
         self.components = []
         self.display_components = []
         self.global_min = 0
-        self.global_max = 0
         self.second_moment_of_area = 0
         self.centroidal_axis = 0
         self.top_stress = 0
         self.bottom_stress = 0
+        self.tensile_fos = 0
+        self.compressive_fos = 0
+        self.max_shear_stress = 0
+        self.compressive_fos = 0
+        self.tensile_fos = 0
     
     def draw(self):
         for index, object in enumerate(self.display_components):
@@ -113,12 +116,31 @@ class CrossSection:
         second_moment_of_area_display = INFORMATION_DISPLAY_FONT.render(f"I = {self.second_moment_of_area} mm^4", 0, ORANGE)
         top_stress_display = INFORMATION_DISPLAY_FONT.render(f"Top stress: {self.top_stress} MPa", 0, ORANGE)
         bottom_stress_display = INFORMATION_DISPLAY_FONT.render(f"Bottom stress: {self.bottom_stress} MPa", 0, ORANGE)
+        shear_stress_display = INFORMATION_DISPLAY_FONT.render(f"Max shear: {self.max_shear_stress} MPa", 0, ORANGE)
+        tensile_fos_display = INFORMATION_DISPLAY_FONT.render(f"Tensile FOS: {self.tensile_fos}", 0, ORANGE)
+        compressive_fos_display = INFORMATION_DISPLAY_FONT.render(f"Compressive FOS: {self.compressive_fos}", 0, ORANGE)
         WINDOW.blit(centroidal_axis_display, (70, 600))
         WINDOW.blit(second_moment_of_area_display, (70, 635))
         WINDOW.blit(top_stress_display, (70, 670))
         WINDOW.blit(bottom_stress_display, (70, 705))
+        WINDOW.blit(tensile_fos_display, (70, 740))
+        WINDOW.blit(compressive_fos_display, (70, 775))
+        WINDOW.blit(shear_stress_display, (70, 805))
     
-    def behave(self, event, moment):
+    def get_first_moment_of_area_and_base_length(self):
+        area, sum_area_y, base_length = 0, 0, 0
+        for object in self.components:
+            _, y, w, h = object[1]
+            if y + h > self.global_min - self.centroidal_axis:
+                area += w * min(h, self.centroidal_axis)
+                sum_area_y += w * min(h, self.centroidal_axis) * abs(max(self.global_min - self.centroidal_axis, y) + (min(h, self.centroidal_axis) / 2) - self.global_min)
+            if self.global_min - 1 <= y + h <= self.global_min + 1:
+                base_length += w if y < (self.global_min - self.centroidal_axis) else 0
+        new_centroidal_axis = sum_area_y / area
+        print(f"New centroidal axis: {new_centroidal_axis}")
+        return (area * abs(self.centroidal_axis - new_centroidal_axis), base_length)
+    
+    def behave(self, event, moment, shear):
         if event.type == pygame.MOUSEBUTTONDOWN:
             for index, object in enumerate(self.display_components):
                 if object.collidepoint(event.pos):
@@ -157,19 +179,45 @@ class CrossSection:
                 float(moment) # if this fails, it will be caught by the exception block
                 self.top_stress = abs(float(moment)) * (self.global_min - self.centroidal_axis) / self.second_moment_of_area
                 self.bottom_stress = abs(float(moment)) * self.centroidal_axis / self.second_moment_of_area
+                if float(moment) > 0: # top is in compression
+                    self.top_stress *= -1
+                else:
+                    self.bottom_stress *= -1
+                if self.top_stress < 0: # top compression
+                    self.compressive_fos = 6 / abs(self.top_stress)
+                    self.tensile_fos = 30 / abs(self.bottom_stress)
+                elif self.top_stress > 0: # top tension
+                    self.compressive_fos = 6 / abs(self.bottom_stress)
+                    self.tensile_fos = 30 / abs(self.top_stress)
+                else:
+                    self.compressive_fos, self.tensile_fos = 0, 0
             except Exception as e:
-                print(e)
+                print(f"Moment: {e}")
                 moment_box.set_validity(False)
         else:
             self.top_stress, self.bottom_stress = 0, 0
+        
+        if shear:
+            try:
+                float(shear)
+                q, b = self.get_first_moment_of_area_and_base_length()
+                print(q)
+                self.max_shear_stress = (float(shear) * q) / (self.second_moment_of_area * b)
+                print(self.max_shear_stress)
+            except Exception as e:
+                print(f"Shear: {e}")
+                shear_force_box.set_validity(False)
+        else:
+            self.max_shear_stress = 0
 
 x_box = InputBox(70, 100, "Input the x coordinate (top left): ")
 y_box = InputBox(70, 175, "Input the y coordinate (top left): ")
 width_box = InputBox(70, 250, "Input the width: ")
 height_box = InputBox(70, 325, "Input the height: ")
-moment_box = InputBox(70, 500, "Input the max moment (negative for top tension): ")
-input_fields = [x_box, y_box, width_box, height_box, moment_box]
-add_object_button = Button(70, 390, "Add")
+moment_box = InputBox(70, 475, "Input the max moment (negative for top tension): ")
+shear_force_box = InputBox(70, 550, "Input the max shear: ")
+input_fields = [x_box, y_box, width_box, height_box, moment_box, shear_force_box]
+add_object_button = Button(70, 385, "Add")
 
 cross_section = CrossSection()
 
@@ -198,10 +246,10 @@ def draw_elements() -> None:
     add_object_button.draw()
     cross_section.draw()
 
-def behave_elements(event, moment) -> None:
+def behave_elements(event, moment, shear) -> None:
     for field in input_fields:
         field.behave(event)
-    cross_section.behave(event, moment)
+    cross_section.behave(event, moment, shear)
 
 def main() -> None:
     clock = pygame.time.Clock()
@@ -213,12 +261,12 @@ def main() -> None:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 run = False
-            behave_elements(event, moment_box.value)
+            behave_elements(event, moment_box.value, shear_force_box.value)
 
         if add_object_button.is_clicked():
             try:
                 for index, field in enumerate(input_fields):
-                    if index != len(input_fields) - 1:
+                    if index < len(input_fields) - 2:
                         float(field.value)      # check if it's a float. If not, it will go to the exception block
 
                 # create a new rectangle with an offset to the coordinate

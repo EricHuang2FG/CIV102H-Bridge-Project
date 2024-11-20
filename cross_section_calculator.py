@@ -133,16 +133,25 @@ class CrossSection:
     
     def get_first_moment_of_area_and_base_length(self):
         area, sum_area_y, base_length = 0, 0, 0
+        q, base_length = 0, 0
         for object in self.components:
             _, y, w, h = object[1]
             if y + h > self.global_min - self.centroidal_axis:
-                area += w * min(h, self.centroidal_axis)
-                sum_area_y += w * min(h, self.centroidal_axis) * abs(max(self.global_min - self.centroidal_axis, y) + (min(h, self.centroidal_axis) / 2) - self.global_min)
+                # area += w * min(h, self.centroidal_axis)
+                # sum_area_y += w * min(h, self.centroidal_axis) * abs(max(self.global_min - self.centroidal_axis, y) + (min(h, self.centroidal_axis) / 2) - self.global_min)
+                # q += w * min(h, self.centroidal_axis) * ((y + h - max(self.global_min - self.centroidal_axis, y)) // 2)
+                centroidal_axis_from_top = self.global_min - self.centroidal_axis
+                height = y + h - centroidal_axis_from_top if y < centroidal_axis_from_top else h
+                local_centroidal_axis = y + (height / 2) if y > centroidal_axis_from_top else (centroidal_axis_from_top + (height / 2))
+                dist = abs(local_centroidal_axis - centroidal_axis_from_top)
+                q += w * height * dist
             if self.global_min - 1 <= y + h <= self.global_min + 1:
                 base_length += w if y < (self.global_min - self.centroidal_axis) else 0
-        new_centroidal_axis = sum_area_y / area
-        print(f"New centroidal axis: {new_centroidal_axis}")
-        return (area * abs(self.centroidal_axis - new_centroidal_axis), base_length)
+        # new_centroidal_axis = sum_area_y / area
+        # print(f"New centroidal axis: {new_centroidal_axis}")
+        # return (area * abs(self.centroidal_axis - new_centroidal_axis), base_length)
+        print(f"First moment of area: {q}")
+        return (q, base_length)
     
     def behave(self, event, moment, shear):
         if event.type == pygame.MOUSEBUTTONDOWN:

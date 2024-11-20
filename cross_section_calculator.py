@@ -104,6 +104,8 @@ class CrossSection:
         self.max_shear_stress = 0
         self.compressive_fos = 0
         self.tensile_fos = 0
+        self.total_material_available = 813 * 1016 * 1.27 # mm^3
+        self.material_used = 0
     
     def draw(self):
         for index, object in enumerate(self.display_components):
@@ -119,6 +121,7 @@ class CrossSection:
         shear_stress_display = INFORMATION_DISPLAY_FONT.render(f"Max shear: {self.max_shear_stress} MPa", 0, ORANGE)
         tensile_fos_display = INFORMATION_DISPLAY_FONT.render(f"Tensile FOS: {self.tensile_fos}", 0, ORANGE)
         compressive_fos_display = INFORMATION_DISPLAY_FONT.render(f"Compressive FOS: {self.compressive_fos}", 0, ORANGE)
+        amount_materials_used = INFORMATION_DISPLAY_FONT.render(f"Materials used: {self.material_used} mm^3 / {self.total_material_available} mm^3", 0, ORANGE)
         WINDOW.blit(centroidal_axis_display, (70, 600))
         WINDOW.blit(second_moment_of_area_display, (70, 635))
         WINDOW.blit(top_stress_display, (70, 670))
@@ -126,6 +129,7 @@ class CrossSection:
         WINDOW.blit(tensile_fos_display, (70, 740))
         WINDOW.blit(compressive_fos_display, (70, 775))
         WINDOW.blit(shear_stress_display, (70, 805))
+        WINDOW.blit(amount_materials_used, (70, 840))
     
     def get_first_moment_of_area_and_base_length(self):
         area, sum_area_y, base_length = 0, 0, 0
@@ -163,8 +167,10 @@ class CrossSection:
             sum_area_y += area * local_y
         if sum_area != 0:
             self.centroidal_axis = sum_area_y / sum_area
+            self.material_used = sum_area * 1200 # mm^3
         else:
             self.centroidal_axis = 0
+            self.material_used = 0
         # print(f"y: {self.centroidal_axis}, sum_area: {sum_area}, sum_area_y: {sum_area_y}")
 
         self.second_moment_of_area = 0
@@ -280,7 +286,9 @@ def main() -> None:
                 else:
                     cross_section.components.append((new_rectangle, (float(x_box.value), float(y_box.value), float(width_box.value), float(height_box.value))))
                     cross_section.display_components.append(display_rectangle)
-                    for field in input_fields:
+                    for index, field in enumerate(input_fields):
+                        if index == 4:
+                            break
                         field.value = ""
             except Exception as e:
                 for field in input_fields:

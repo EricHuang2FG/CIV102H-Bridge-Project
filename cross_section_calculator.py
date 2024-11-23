@@ -146,7 +146,9 @@ class CrossSection:
                 dist = abs(local_centroidal_axis - centroidal_axis_from_top)
                 q += w * height * dist
             if self.global_min - 1 <= y + h <= self.global_min + 1:
-                base_length += w if y < (self.global_min - self.centroidal_axis) else 0
+                base_length += w if y <= (self.global_min - self.centroidal_axis) else 0
+                print(f"y: {y}, axis: {self.global_min - self.centroidal_axis}")
+                print(f"b: {base_length}")
         # new_centroidal_axis = sum_area_y / area
         # print(f"New centroidal axis: {new_centroidal_axis}")
         # return (area * abs(self.centroidal_axis - new_centroidal_axis), base_length)
